@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCafeNegative(t *testing.T) {
@@ -60,7 +61,7 @@ func TestCafeCount(t *testing.T) {
 		{0, 0},
 		{1, 1},
 		{2, 2},
-		{100, len(cafeList["moscow"])},
+		{100, min(len(cafeList["moscow"]), 100)},
 	}
 
 	for _, v := range requests {
@@ -68,6 +69,8 @@ func TestCafeCount(t *testing.T) {
 		req := httptest.NewRequest("GET", "/cafe?city=moscow&count="+strconv.Itoa(v.count), nil)
 
 		handler.ServeHTTP(response, req)
+
+		require.Equal(t, http.StatusOK, response.Code)
 
 		var cafes []string
 		body := strings.TrimSpace(response.Body.String())
@@ -77,7 +80,6 @@ func TestCafeCount(t *testing.T) {
 			cafes = strings.Split(body, ",")
 		}
 
-		assert.Equal(t, http.StatusOK, response.Code)
 		assert.Equal(t, v.want, len(cafes))
 	}
 }
@@ -99,6 +101,8 @@ func TestCafeSearch(t *testing.T) {
 		req := httptest.NewRequest("GET", "/cafe?city=moscow&search="+v.search, nil)
 		handler.ServeHTTP(response, req)
 
+		require.Equal(t, http.StatusOK, response.Code)
+
 		var cafes []string
 		body := strings.TrimSpace(response.Body.String())
 		if body == "" {
@@ -107,7 +111,12 @@ func TestCafeSearch(t *testing.T) {
 			cafes = strings.Split(body, ",")
 		}
 
-		assert.Equal(t, http.StatusOK, response.Code)
-		assert.Equal(t, v.wantCount, len(cafes))
+		assert.Len(t, cafes, v.wantCount)
+
+		for _, name := range cafes {
+        	cafeUpper := strings.ToUpper(strings.TrimSpace(name))
+        	searchUpper := strings.ToUpper(v.search)
+        	assert.Contains(t, cafeUpper, searchUpper)
+		}
 	}
 }
